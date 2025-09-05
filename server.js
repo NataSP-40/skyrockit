@@ -16,6 +16,8 @@ const applicationsController = require('./controllers/applications.js');
 
 const port = process.env.PORT ? process.env.PORT : '3000';
 
+const path = require("path");
+
 mongoose.connect(process.env.MONGODB_URI);
 
 mongoose.connection.on('connected', () => {
@@ -25,6 +27,7 @@ mongoose.connection.on('connected', () => {
 app.use(express.urlencoded({ extended: false }));
 app.use(methodOverride('_method'));
 // app.use(morgan('dev'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -35,11 +38,23 @@ app.use(
 
 app.use(passUserToView); // use new passUserToView middleware here
 
-app.get('/', (req, res) => { // welcome page comes before isSignedIn middleware
-  res.render('index.ejs', {
-    user: req.session.user,
-  });
+//------ROUTES here
+app.get('/', (req, res) => {
+  // Check if the user is signed in
+  if (req.session.user) {
+    // Redirect signed-in users to their applications index
+    res.redirect(`/users/${req.session.user._id}/applications`);
+  } else {
+    // Show the homepage for users who are not signed in
+    res.render('index.ejs');
+  }
 });
+
+// app.get('/', (req, res) => { // welcome page comes before isSignedIn middleware
+//   res.render('index.ejs', {
+//     user: req.session.user,
+//   });
+// });
 
 app.use('/auth', authController);
 
@@ -47,10 +62,6 @@ app.use(isSignedIn); // use new isSignedIn middleware here
 // IMPORTANCE of arrangements----- it can/t be before index.ejs, a show page must appear first... 
 // this will not run before the other routes
 app.use('/users/:userId/applications', applicationsController); 
-
-
-//------ROUTES here
-
 
 
 
